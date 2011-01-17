@@ -1,0 +1,17 @@
+Name:                accentuateus
+Version:             0.9
+Synopsis:            A Haskell implementation of the Accentuate.us API
+License:             BSD3
+License-file:        LICENSE
+Author:              Spearhead Development, L.L.C.
+Maintainer:          Michael Schade <michael@spearheaddev.com>
+Copyright:           (c) 2011 Spearhead Development, L.L.C.
+Category:            Web
+Build-type:          Simple
+Extra-source-files:  README
+Cabal-version:       >=1.2
+
+Library
+  Exposed-modules:    Web.AccentuateUs
+  ghc-options:        -Wall
+  Build-depends:      base >= 3 && < 5, HTTP, json, network

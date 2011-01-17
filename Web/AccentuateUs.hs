@@ -7,6 +7,7 @@ module Web.AccentuateUs
     ) where
 
 import Control.Monad (liftM)
+import Data.Maybe (fromJust)
 import Network.HTTP (Header(Header), HeaderName(..), Request(Request)
     , RequestMethod(POST), getResponseBody, simpleHTTP)
 import Network.URI (URI(URI), URIAuth(URIAuth))
@@ -23,13 +24,13 @@ langs l v = liftM eitherDecode $
 
 -- | For a given language, and optionally a locale, accentuates text
 accentuate :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
-accentuate la lo text = liftM eitherDecode $
-    post [PCall "lift", PLang la, PLocale (mbLocale lo), PText text]
+accentuate la lo t = liftM eitherDecode $
+    post [PCall "lift", PLang la, PLocale (mbLocale lo), PText t]
 
 -- | Submits corrected text as feedback to Accentuate.us
 feedback :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
-feedback la lo text = liftM eitherDecode $
-    post [PCall "feedback", PLang la, PLocale (mbLocale lo), PText text]
+feedback la lo t = liftM eitherDecode $
+    post [PCall "feedback", PLang la, PLocale (mbLocale lo), PText t]
 
 -- | Encapsulates various properties of an Accentuate.us API call
 data Param
@@ -55,12 +56,11 @@ data AUSResponse
 data LangsStatus = OutOfDate | UpToDate | OverDate deriving (Show, Eq)
 
 instance JSON AUSResponse where
-    showJSON = undefined
     readJSON (JSObject rsp) = do
         call <- valFromObj "call" rsp
         code <- valFromObj "code" rsp
         case call of
-            "charlifter.langs" -> let code' = codeToStatus code in do
+            "charlifter.langs" -> let code' = mbCodeToStatus code in do
                 vers  <- valFromObj "version" rsp
                 pairs <- pairs' code'
                 return Langs { status    = code'
@@ -68,24 +68,31 @@ instance JSON AUSResponse where
                              , languages = pairs
                              }
                 where   pairs' UpToDate = return []
-                        pairs' _        = liftM (map splitPair . lines) text
-                        text            = valFromObj "text" rsp
+                        pairs' _        = liftM (map splitPair . lines) txt
+                        txt             = valFromObj "text" rsp
             "charlifter.lift" ->
                 case code::Int of
                     200 -> liftM Lift (valFromObj "text" rsp)
                     400 -> fail'
+                    _   -> fail "Unknown Accentuate.us response code."
             "charlifter.feedback" ->
                 case code::Int of
                     100 -> return Feedback
                     400 -> fail'
-            where fail'  = (valFromObj "text" rsp) >>= \e -> fail e
+                    _   -> fail "Unknown Accentuate.us response code."
+            _ -> fail "Unknown Accentuate.us call."
+            where fail' = (valFromObj "text" rsp) >>= \e -> fail e
+                  mbCodeToStatus = fromJust . codeToStatus
+    readJSON _ = undefined
+    showJSON   = undefined
 
 -- | Converts integer response code into data type LangsStatus
-codeToStatus :: Int -> LangsStatus
+codeToStatus :: Int -> Maybe LangsStatus
 codeToStatus c = case c of
-    100 -> OutOfDate
-    200 -> UpToDate
-    400 -> OverDate
+    100 -> Just OutOfDate
+    200 -> Just UpToDate
+    400 -> Just OverDate
+    _   -> Nothing
 
 -- | Splits a string pair (separated by :) into a tuple, removing separator
 splitPair :: String -> (String, String)
