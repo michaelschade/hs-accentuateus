@@ -1,4 +1,4 @@
-module Web.AccentuateUs
+module Text.AccentuateUs
     ( AUSResponse(..)
     , LangsStatus(..)
     , langs
@@ -53,7 +53,10 @@ data AUSResponse
     deriving Show
 
 -- | Represents languages response status
-data LangsStatus = OutOfDate | UpToDate | OverDate deriving (Show, Eq)
+data LangsStatus = OutOfDate -- ^ Given version number  < server's
+                 | UpToDate  -- ^ Given version number == server's
+                 | OverDate  -- ^ Given version number  > server's
+                 deriving (Show, Eq)
 
 instance JSON AUSResponse where
     readJSON (JSObject rsp) = do

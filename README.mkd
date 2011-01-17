@@ -1,0 +1,28 @@
+Copyright (c) 2011 [Spearhead Development, L.L.C.](http://spearheaddev.com/).
+
+Released under the BSD3 License. Please see the included `LICENSE` file.
+
+Introduction
+============
+This project was created by [Spearhead Development](http://spearheaddev.com/) to
+implement the [Accentuate.us](http://accentuate.us/) API.
+
+Calls
+=====
+
+There are three primary calls to access Accentuate.us:
+
+* `langs (Maybe Locale) (Version)`
+
+    langs (Just "en") 9
+
+* `accentuate (Language) (Maybe Locale) (Text)`
+
+    accentuate "ga" Nothing "al chead"
+
+* `feedback (Language) (Maybe Locale) (*Corrected* Text)`
+
+    feedback "ht" (Just "en") "lè la wè"
+
+The locales are included to provide localized error messages (or, in the case
+of `langs`, localized language names).
