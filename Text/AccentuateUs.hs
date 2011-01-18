@@ -7,7 +7,7 @@ module Text.AccentuateUs
     ) where
 
 import Control.Monad (liftM)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromMaybe)
 import Network.HTTP (Header(Header), HeaderName(..), Request(Request)
     , RequestMethod(POST), getResponseBody, simpleHTTP)
 import Network.URI (URI(URI), URIAuth(URIAuth))
@@ -20,17 +20,17 @@ type Locale = String
 -- | Get langs and their localized names
 langs :: Maybe Locale -> Int -> IO (Either String AUSResponse)
 langs l v = liftM eitherDecode $
-    post [PCall "langs", PLocale (mbLocale l), PVersion v]
+    post [PCall "langs", PLocale (fromMaybe "" l), PVersion v]
 
 -- | For a given language, and optionally a locale, accentuates text
 accentuate :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
 accentuate la lo t = liftM eitherDecode $
-    post [PCall "lift", PLang la, PLocale (mbLocale lo), PText t]
+    post [PCall "lift", PLang la, PLocale (fromMaybe "" lo), PText t]
 
 -- | Submits corrected text as feedback to Accentuate.us
 feedback :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
 feedback la lo t = liftM eitherDecode $
-    post [PCall "feedback", PLang la, PLocale (mbLocale lo), PText t]
+    post [PCall "feedback", PLang la, PLocale (fromMaybe "" lo), PText t]
 
 -- | Encapsulates various properties of an Accentuate.us API call
 data Param
@@ -85,7 +85,7 @@ instance JSON AUSResponse where
                     400 -> fail'
                     _   -> failCode
             c -> fail ("Unknown Accentuate.us call " ++ c)
-            where   fail'    = (valFromObj "text" rsp) >>= \e -> fail e
+            where   fail'    = valFromObj "text" rsp >>= \e -> fail e
                     failCode = fail "Unknown Accentuate.us response code"
                     mbCode (Just c) = return c
                     mbCode Nothing  = failCode
@@ -114,7 +114,7 @@ prepRequest :: [Param] -> Request String
 prepRequest params = Request (url lang) POST (headers body) body
     where   ps   = toQuery params
             body = encode . toJSObject $ ps
-            lang = maybe "" id $ "lang" `lookup` ps
+            lang = fromMaybe "" ("lang" `lookup` ps)
 
 -- | Map parameters to call-appropriate tuples
 toQuery :: [Param] -> [(String, String)]
@@ -127,19 +127,15 @@ toQuery = map toQuery' where
         PLocale  l  -> ("locale",  l)
         PVersion v  -> ("version", show v)
 
--- | Produces locale from Maybe
-mbLocale :: Maybe Locale -> Locale
-mbLocale = maybe "" (\l -> l)
-
 -- | Common response parsing
 eitherDecode :: (JSON a) => String -> Either String a
 eitherDecode  = resultToEither . decode
 
 -- | Generate appropriate headers
 headers :: String -> [Header]
-headers s = [(Header HdrContentType "application/json; charset=utf-8")
-    , (Header HdrUserAgent "Accentuate.us/0.9 haskell")
-    , (Header HdrContentLength cl)
+headers s = [Header HdrContentType "application/json; charset=utf-8"
+    , Header HdrUserAgent "Accentuate.us/0.9 haskell"
+    , Header HdrContentLength cl
     ] where cl = show . length $ s
 
 -- | Generate language-specific URL
@@ -147,4 +143,4 @@ url :: Lang -> URI
 url lang = URI "http:" uriAuth "/" "" ""
     where   uriAuth = Just (URIAuth "" host ":8080")
             base    = "api.accentuate.us"
-            host    = (if lang /= "" then (lang ++ ".") else lang) ++ base
+            host    = (if lang /= "" then lang ++ "." else lang) ++ base
