@@ -13,7 +13,7 @@ Installation
 For the most stable releases, it is best to use [Hackage](http://hackage.haskell.org/package/accentuateus).
 Packages can be installed via [Cabal](http://www.haskell.org/cabal/):
 
-    `cabal install accentuateus`
+    cabal install accentuateus
 
 Usage
 =====
