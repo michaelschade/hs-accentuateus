@@ -129,8 +129,7 @@ toQuery = map toQuery' where
 
 -- | Produces locale from Maybe
 mbLocale :: Maybe Locale -> Locale
-mbLocale (Just l) = l
-mbLocale Nothing  = ""
+mbLocale = maybe "" (\l -> l)
 
 -- | Common response parsing
 eitherDecode :: (JSON a) => String -> Either String a
