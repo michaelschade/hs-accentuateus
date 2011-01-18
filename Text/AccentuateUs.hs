@@ -1,5 +1,7 @@
 module Text.AccentuateUs
-    ( AUSResponse(..)
+    ( Lang
+    , Locale
+    , AUSResponse(..)
     , LangsStatus(..)
     , langs
     , accentuate
