@@ -63,7 +63,8 @@ instance JSON AUSResponse where
         call <- valFromObj "call" rsp
         code <- valFromObj "code" rsp
         case call of
-            "charlifter.langs" -> let code' = mbCodeToStatus code in do
+            "charlifter.langs" -> do
+                code' <- mbCode (codeToStatus code)
                 vers  <- valFromObj "version" rsp
                 pairs <- pairs' code'
                 return Langs { status    = code'
@@ -77,15 +78,17 @@ instance JSON AUSResponse where
                 case code::Int of
                     200 -> liftM Lift (valFromObj "text" rsp)
                     400 -> fail'
-                    _   -> fail "Unknown Accentuate.us response code."
+                    _   -> failCode
             "charlifter.feedback" ->
                 case code::Int of
                     100 -> return Feedback
                     400 -> fail'
-                    _   -> fail "Unknown Accentuate.us response code."
-            _ -> fail "Unknown Accentuate.us call."
-            where fail' = (valFromObj "text" rsp) >>= \e -> fail e
-                  mbCodeToStatus = fromJust . codeToStatus
+                    _   -> failCode
+            c -> fail ("Unknown Accentuate.us call " ++ c)
+            where   fail'    = (valFromObj "text" rsp) >>= \e -> fail e
+                    failCode = fail "Unknown Accentuate.us response code"
+                    mbCode (Just c) = return c
+                    mbCode Nothing  = failCode
     readJSON _ = undefined
     showJSON   = undefined
 
