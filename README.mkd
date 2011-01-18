@@ -7,7 +7,15 @@ Introduction
 This project was created by [Spearhead Development](http://spearheaddev.com/) to
 implement the [Accentuate.us](http://accentuate.us/) API.
 
-Calls
+Installation
+============
+
+For the most stable releases, it is best to use [Hackage](http://hackage.haskell.org/package/accentuateus).
+Packages can be installed via [Cabal](http://www.haskell.org/cabal/):
+
+    `cabal install accentuateus`
+
+Usage
 =====
 
 There are three primary calls to access Accentuate.us:
