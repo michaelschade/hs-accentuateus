@@ -11,7 +11,7 @@ module Text.AccentuateUs
 import Control.Monad (liftM)
 import Data.Maybe (fromMaybe)
 import Network.HTTP (Header(Header), HeaderName(..), Request(Request)
-    , RequestMethod(POST), getResponseBody, simpleHTTP)
+    , RequestMethod(POST), getResponseBody, simpleHTTP, catchIO)
 import Network.URI (URI(URI), URIAuth(URIAuth))
 import Text.JSON (JSON(..), decode, encode, JSValue(..), resultToEither,
     toJSObject, valFromObj)
@@ -21,18 +21,25 @@ type Locale = String
 
 -- | Get langs and their localized names
 langs :: Maybe Locale -> Int -> IO (Either String AUSResponse)
-langs l v = liftM eitherDecode $
-    post [PCall "langs", PLocale (fromMaybe "" l), PVersion v]
+langs l v = catchIO (liftM eitherDecode call) (\_ -> err)
+    where
+        call = post [PCall "langs", PLocale (fromMaybe "" l), PVersion v]
+        err  = return . Left $ "Network error. Unale to retrieve languages."
 
 -- | For a given language, and optionally a locale, accentuates text
 accentuate :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
-accentuate la lo t = liftM eitherDecode $
-    post [PCall "lift", PLang la, PLocale (fromMaybe "" lo), PText t]
+accentuate la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
+    where
+        call = post [PCall "lift", PLang la, PLocale (mbLocale lo), PText t]
+        err  = return . Left $ "Network error. Unable to accentuate text for"
+                            ++ " language " ++ la
 
 -- | Submits corrected text as feedback to Accentuate.us
 feedback :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
-feedback la lo t = liftM eitherDecode $
-    post [PCall "feedback", PLang la, PLocale (fromMaybe "" lo), PText t]
+feedback la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
+    where
+        call = post [PCall "feedback", PLang la, PLocale (mbLocale lo), PText t]
+        err  = return . Left $ "Network error. Unable to submit feedback."
 
 -- | Encapsulates various properties of an Accentuate.us API call
 data Param
@@ -132,6 +139,10 @@ toQuery = map toQuery' where
 -- | Common response parsing
 eitherDecode :: (JSON a) => String -> Either String a
 eitherDecode  = resultToEither . decode
+
+-- | Conversion from optional locale parameter to (empty) string.
+mbLocale :: Maybe String -> String
+mbLocale  = fromMaybe ""
 
 -- | Generate appropriate headers
 headers :: String -> [Header]
