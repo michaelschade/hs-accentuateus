@@ -24,7 +24,7 @@ langs :: Maybe Locale -> Int -> IO (Either String AUSResponse)
 langs l v = catchIO (liftM eitherDecode call) (\_ -> err)
     where
         call = post [PCall "langs", PLocale (fromMaybe "" l), PVersion v]
-        err  = return . Left $ "Network error. Unale to retrieve languages."
+        err  = return . Left $ "Network error. Unable to retrieve languages."
 
 -- | For a given language, and optionally a locale, accentuates text
 accentuate :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
