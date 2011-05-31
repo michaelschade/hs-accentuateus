@@ -9,7 +9,7 @@ Author:              Spearhead Development, L.L.C.
 Maintainer:          Michael Schade <michael@spearheaddev.com>
 Copyright:           (c) 2011 Spearhead Development, L.L.C.
 Category:            Web
-Build-type:          Simple
+Build-type:          Custom
 Extra-source-files:  README.mkd
 Cabal-version:       >=1.6
 
