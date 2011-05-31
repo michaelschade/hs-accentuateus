@@ -10,30 +10,30 @@ module Text.AccentuateUs
 
 import Control.Monad    ( liftM )
 import Data.Maybe       ( fromMaybe )
+import Text.JSON        ( JSON(..), decode, encode, JSValue(..), resultToEither
+                        , toJSObject, valFromObj
+                        )
 import Network.HTTP     ( Header(Header), HeaderName(..), Request(Request)
                         , RequestMethod(POST), getResponseBody, simpleHTTP
                         , catchIO
                         )
 import Network.URI      ( URI(URI), URIAuth(URIAuth) )
-import Text.JSON        ( JSON(..), decode, encode, JSValue(..), resultToEither
-                        , toJSObject, valFromObj
-                        )
 
-type Lang = String
+type Lang   = String
 type Locale = String
 
 -- | Get langs and their localized names
 langs :: Maybe Locale -> Int -> IO (Either String AUSResponse)
 langs l v = catchIO (liftM eitherDecode call) (\_ -> err)
     where
-        call = post [PCall "langs", PLocale (fromMaybe "" l), PVersion v]
+        call = post [PCall "langs", PLocale (mbString l), PVersion v]
         err  = return . Left $ "Network error. Unable to retrieve languages."
 
--- | For a given language, and optionally a locale, accentuates text
+-- | For a given language, and optionally a locale, accentuates text.
 accentuate :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
 accentuate la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
     where
-        call = post [PCall "lift", PLang la, PLocale (mbLocale lo), PText t]
+        call = post [PCall "lift", PLang la, PLocale (mbString lo), PText t]
         err  = return . Left $ "Network error. Unable to accentuate text for"
                             ++ " language " ++ la
 
@@ -41,7 +41,7 @@ accentuate la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
 feedback :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
 feedback la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
     where
-        call = post [PCall "feedback", PLang la, PLocale (mbLocale lo), PText t]
+        call = post [PCall "feedback", PLang la, PLocale (mbString lo), PText t]
         err  = return . Left $ "Network error. Unable to submit feedback."
 
 -- | Encapsulates various properties of an Accentuate.us API call
@@ -126,7 +126,7 @@ prepRequest :: [Param] -> Request String
 prepRequest params = Request (url lang) POST (headers body) body
     where   ps   = toQuery params
             body = encode . toJSObject $ ps
-            lang = fromMaybe "" ("lang" `lookup` ps)
+            lang = mbString ("lang" `lookup` ps)
 
 -- | Map parameters to call-appropriate tuples
 toQuery :: [Param] -> [(String, String)]
@@ -143,16 +143,17 @@ toQuery = map toQuery' where
 eitherDecode :: (JSON a) => String -> Either String a
 eitherDecode  = resultToEither . decode
 
--- | Conversion from optional locale parameter to (empty) string.
-mbLocale :: Maybe String -> String
-mbLocale  = fromMaybe ""
+-- | Conversion from optional parameter to (empty) string.
+mbString :: Maybe String -> String
+mbString  = fromMaybe ""
 
 -- | Generate appropriate headers
 headers :: String -> [Header]
-headers s = [Header HdrContentType "application/json; charset=utf-8"
+headers s =
+    [ Header HdrContentType "application/json; charset=utf-8"
     , Header HdrUserAgent "Accentuate.us/0.9 haskell"
-    , Header HdrContentLength cl
-    ] where cl = show . length $ s
+    , Header HdrContentLength (show . length $ s)
+    ]
 
 -- | Generate language-specific URL
 url :: Lang -> URI
