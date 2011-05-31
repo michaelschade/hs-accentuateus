@@ -8,13 +8,16 @@ module Text.AccentuateUs
     , feedback
     ) where
 
-import Control.Monad (liftM)
-import Data.Maybe (fromMaybe)
-import Network.HTTP (Header(Header), HeaderName(..), Request(Request)
-    , RequestMethod(POST), getResponseBody, simpleHTTP, catchIO)
-import Network.URI (URI(URI), URIAuth(URIAuth))
-import Text.JSON (JSON(..), decode, encode, JSValue(..), resultToEither,
-    toJSObject, valFromObj)
+import Control.Monad    ( liftM )
+import Data.Maybe       ( fromMaybe )
+import Network.HTTP     ( Header(Header), HeaderName(..), Request(Request)
+                        , RequestMethod(POST), getResponseBody, simpleHTTP
+                        , catchIO
+                        )
+import Network.URI      ( URI(URI), URIAuth(URIAuth) )
+import Text.JSON        ( JSON(..), decode, encode, JSValue(..), resultToEither
+                        , toJSObject, valFromObj
+                        )
 
 type Lang = String
 type Locale = String
