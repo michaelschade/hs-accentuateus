@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Text.AccentuateUs
     ( Lang
     , Locale
@@ -8,37 +10,42 @@ module Text.AccentuateUs
     , feedback
     ) where
 
-import Control.Monad    ( liftM )
-import Data.Maybe       ( fromMaybe )
-import Text.JSON        ( JSON(..), decode, encode, JSValue(..), resultToEither
-                        , toJSObject, valFromObj
-                        )
-import Network.HTTP     ( Header(Header), HeaderName(..), Request(Request)
-                        , RequestMethod(POST), getResponseBody, simpleHTTP
-                        , catchIO
-                        )
-import Network.URI      ( URI(URI), URIAuth(URIAuth) )
+import Control.Monad        ( liftM )
+import Data.Maybe           ( fromMaybe )
+import Data.Text.Encoding   ( decodeUtf8, encodeUtf8 )
+import Text.JSON            ( JSON(..), JSValue(..), Result(Ok, Error), decode
+                            , encode, toJSObject, valFromObj
+                            )
+import Network.HTTP         ( Header(Header), HeaderName(..), Request(Request)
+                            , RequestMethod(POST), getResponseBody, simpleHTTP
+                            , catchIO
+                            )
+import Network.URI          ( URI(URI), URIAuth(URIAuth) )
+import qualified Data.ByteString.Char8  as C8
+import qualified Data.Text              as T
 
-type Lang   = String
-type Locale = String
+type Lang   = C8.ByteString
+type Locale = C8.ByteString
 
 -- | Get langs and their localized names
-langs :: Maybe Locale -> Int -> IO (Either String AUSResponse)
+langs :: Maybe Locale -> Int -> IO (Either C8.ByteString AUSResponse)
 langs l v = catchIO (liftM eitherDecode call) (\_ -> err)
     where
         call = post [PCall "langs", PLocale (mbString l), PVersion v]
         err  = return . Left $ "Network error. Unable to retrieve languages."
 
 -- | For a given language, and optionally a locale, accentuates text.
-accentuate :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
+accentuate  :: Lang -> Maybe Locale -> T.Text
+            -> IO (Either C8.ByteString AUSResponse)
 accentuate la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
     where
         call = post [PCall "lift", PLang la, PLocale (mbString lo), PText t]
-        err  = return . Left $ "Network error. Unable to accentuate text for"
-                            ++ " language " ++ la
+        err  = return . Left $ C8.append
+            "Network error. Unable to accentuate text for language " la
 
 -- | Submits corrected text as feedback to Accentuate.us
-feedback :: Lang -> Maybe Locale -> String -> IO (Either String AUSResponse)
+feedback :: Lang -> Maybe Locale -> T.Text
+         -> IO (Either C8.ByteString AUSResponse)
 feedback la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
     where
         call = post [PCall "feedback", PLang la, PLocale (mbString lo), PText t]
@@ -46,21 +53,21 @@ feedback la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
 
 -- | Encapsulates various properties of an Accentuate.us API call
 data Param
-    = PCall String
-    | PCode Integer
-    | PText String
-    | PLang Lang
-    | PLocale Locale
-    | PVersion Int
+    = PCall     C8.ByteString
+    | PCode     Integer
+    | PText     T.Text
+    | PLang     Lang
+    | PLocale   Locale
+    | PVersion  Int
     deriving (Show)
 
 -- | Represents responses for the three Accentuate.us calls
 data AUSResponse
     = Langs { status    :: LangsStatus
             , version   :: Int
-            , languages :: [(String, Lang)] -- ^ [(ISO-639, Localized Language)]
+            , languages :: [(Lang, T.Text)] -- ^ [(ISO-639, Localized Language)]
             }
-    | Lift  { text :: String }
+    | Lift  { text :: T.Text }
     | Feedback
     deriving Show
 
@@ -84,11 +91,11 @@ instance JSON AUSResponse where
                              , languages = pairs
                              }
                 where   pairs' UpToDate = return []
-                        pairs' _        = liftM (map splitPair . lines) txt
+                        pairs' _        = liftM (map splitPair . C8.lines) txt
                         txt             = valFromObj "text" rsp
             "charlifter.lift" ->
                 case code::Int of
-                    200 -> liftM Lift (valFromObj "text" rsp)
+                    200 -> liftM (Lift . decodeUtf8) (valFromObj "text" rsp)
                     400 -> fail'
                     _   -> failCode
             "charlifter.feedback" ->
@@ -113,46 +120,48 @@ codeToStatus c = case c of
     _   -> Nothing
 
 -- | Splits a string pair (separated by :) into a tuple, removing separator
-splitPair :: String -> (String, String)
-splitPair s = removeSep $ break (== ':') s
-    where removeSep (a,b) = (a, tail b)
+splitPair :: C8.ByteString -> (C8.ByteString, T.Text)
+splitPair s = removeSep $ C8.break (== ':') s
+    where removeSep (a, b) = (a, decodeUtf8 b)
 
 -- | Sends response to server
-post :: [Param] -> IO String
+post :: [Param] -> IO C8.ByteString
 post ps = (simpleHTTP . prepRequest $ ps) >>= \r -> getResponseBody r
 
 -- | Create request
-prepRequest :: [Param] -> Request String
-prepRequest params = Request (url lang) POST (headers body) body
-    where   ps   = toQuery params
-            body = encode . toJSObject $ ps
-            lang = mbString ("lang" `lookup` ps)
+prepRequest :: [Param] -> Request C8.ByteString
+prepRequest params  = Request (url lang) POST (headers body) body
+    where   ps      = toQuery params
+            body    = C8.pack . encode . toJSObject $ ps
+            lang    = mbString ("lang" `lookup` ps)
 
 -- | Map parameters to call-appropriate tuples
-toQuery :: [Param] -> [(String, String)]
+toQuery :: [Param] -> [(String, C8.ByteString)]
 toQuery = map toQuery' where
     toQuery' p = case p of
-        PCall c     -> ("call", "charlifter." ++ c)
-        PCode c     -> ("code", show c)
-        PText t     -> ("text", t)
-        PLang l     -> ("lang", l)
-        PLocale  l  -> ("locale",  l)
-        PVersion v  -> ("version", show v)
+        PCall c     -> ("call",     "charlifter." `C8.append` c)
+        PCode c     -> ("code",     C8.pack . show $ c)
+        PText t     -> ("text",     encodeUtf8 t)
+        PLang l     -> ("lang",     l)
+        PLocale  l  -> ("locale",   l)
+        PVersion v  -> ("version",  C8.pack . show $ v)
 
 -- | Common response parsing
-eitherDecode :: (JSON a) => String -> Either String a
-eitherDecode  = resultToEither . decode
+eitherDecode :: (JSON a) => C8.ByteString -> Either C8.ByteString a
+eitherDecode  = resultToEither' . decode . C8.unpack
+    where   resultToEither' (Ok a)       = Right a
+            resultToEither' (Error s)    = Left . C8.pack $ s
 
 -- | Conversion from optional parameter to (empty) string.
-mbString :: Maybe String -> String
+mbString :: Maybe C8.ByteString -> C8.ByteString
 mbString  = fromMaybe ""
 
 -- | Generate appropriate headers
-headers :: String -> [Header]
+headers :: C8.ByteString -> [Header]
 headers s =
-    [ Header HdrContentType "application/json; charset=utf-8"
-    , Header HdrUserAgent "Accentuate.us/0.9 haskell"
-    , Header HdrContentLength (show . length $ s)
+    [ Header HdrContentType     "application/json; charset=utf-8"
+    , Header HdrUserAgent       "Accentuate.us/0.9 haskell"
+    , Header HdrContentLength   (show . length . C8.unpack $ s)
     ]
 
 -- | Generate language-specific URL
@@ -160,4 +169,5 @@ url :: Lang -> URI
 url lang = URI "http:" uriAuth "/" "" ""
     where   uriAuth = Just (URIAuth "" host ":8080")
             base    = "api.accentuate.us"
-            host    = (if lang /= "" then lang ++ "." else lang) ++ base
+            host    = (if lang' /= "" then lang' ++ "." else lang') ++ base
+            lang'   = C8.unpack lang

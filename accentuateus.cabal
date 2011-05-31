@@ -11,7 +11,7 @@ Copyright:           (c) 2011 Spearhead Development, L.L.C.
 Category:            Web
 Build-type:          Custom
 Extra-source-files:  README.mkd
-Cabal-version:       >=1.6
+Cabal-version:       >= 1.6
 
 source-repository head
     type:       git
@@ -20,5 +20,10 @@ source-repository head
 Library
   Exposed-modules:  Text.AccentuateUs
   ghc-options:      -Wall -fwarn-tabs
-  Build-depends:    base >= 3 && < 5, HTTP, json, network
   Hs-Source-Dirs:   src
+  Build-depends:      base >= 3 && < 5
+                    , bytestring
+                    , HTTP
+                    , json
+                    , network
+                    , text
