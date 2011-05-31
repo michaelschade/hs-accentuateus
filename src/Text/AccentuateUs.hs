@@ -34,7 +34,18 @@ langs l v = catchIO (liftM eitherDecode call) (\_ -> err)
         call = post [PCall "langs", PLocale (mbString l), PVersion v]
         err  = return . Left $ "Network error. Unable to retrieve languages."
 
--- | For a given language, and optionally a locale, accentuates text.
+-- | For a given language, and optionally a locale, accentuates text. E.g.,
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- >
+-- > import Text.AccentuateUs   (accentuate, text)
+-- > import Control.Monad       (liftM)
+-- > import Data.Either         (either)
+-- > import Data.Text.Encoding  (decodeUtf8)
+-- > import qualified Data.Text.IO as TIO
+-- >
+-- > TIO.putStrLn =<< liftM (either decodeUtf8 text)
+-- >    (accentuate "vie" (Just "en") "My tu bo ke hoach la chan ten lua")
 accentuate  :: Lang -> Maybe Locale -> T.Text
             -> IO (Either C8.ByteString AUSResponse)
 accentuate la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
