@@ -1,8 +1,16 @@
 Name:                accentuateus
 Version:             0.9.1
 Homepage:            http://accentuate.us/
-Description:         A Haskell implementation of the Accentuate.us API.
 Synopsis:            A Haskell implementation of the Accentuate.us API.
+Description:         Accentuate.us (<http://accentuate.us/>) is a free
+                     and open-source web service that makes computer
+                     input really easy for over 115 languages. Using
+                     statistics, it will automatically add diacritics
+                     (\"special characters\") to otherwise plain text.
+                     In support of being an open web service, an API is
+                     provided and documented at
+                     <http://accentuate.us/api>, which is implemented
+                     by this package.
 License:             BSD3
 License-file:        LICENSE
 Author:              Spearhead Development, L.L.C.
