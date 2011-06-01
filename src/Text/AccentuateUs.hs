@@ -133,7 +133,7 @@ codeToStatus c = case c of
 -- | Splits a string pair (separated by :) into a tuple, removing separator
 splitPair :: C8.ByteString -> (C8.ByteString, T.Text)
 splitPair s = removeSep $ C8.break (== ':') s
-    where removeSep (a, b) = (a, decodeUtf8 b)
+    where removeSep (a, b) = (a, decodeUtf8 . C8.tail $ b)
 
 -- | Sends response to server
 post :: [Param] -> IO C8.ByteString
