@@ -1,5 +1,5 @@
 Name:                accentuateus
-Version:             0.9.2
+Version:             0.9.3
 Homepage:            http://accentuate.us/
 Synopsis:            A Haskell implementation of the Accentuate.us API.
 Description:         Accentuate.us (<http://accentuate.us/>) is a free
@@ -34,4 +34,4 @@ Library
                     , HTTP          == 4000.1.*
                     , json          == 0.4.*
                     , network       == 2.3.*
-                    , text          == 0.11.*
+                    , text          >= 0.10 && < 0.12
