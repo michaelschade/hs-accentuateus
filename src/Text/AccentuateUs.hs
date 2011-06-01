@@ -25,8 +25,8 @@ import Network.URI          ( URI(URI), URIAuth(URIAuth) )
 import qualified Data.ByteString.Char8  as C8
 import qualified Data.Text              as T
 
-type Lang   = C8.ByteString
-type Locale = C8.ByteString
+type Lang   = C8.ByteString -- ^ An ISO-639 code.
+type Locale = C8.ByteString -- ^ An ISO-639 code.
 
 -- | Get langs and their localized names. E.g.,
 --
@@ -87,7 +87,7 @@ data Param
     | PVersion  Int
     deriving (Show)
 
--- | Represents responses for the three Accentuate.us calls
+-- | Represents responses for the three Accentuate.us calls.
 data AUSResponse
     = Langs { status    :: LangsStatus
             , version   :: Int
