@@ -18,19 +18,6 @@ Packages can be installed via [Cabal](http://www.haskell.org/cabal/):
 Usage
 =====
 
-There are three primary calls to access Accentuate.us:
-
-* `langs (Maybe Locale) (Version)`
-
-    `langs (Just "en") 9`
-
-* `accentuate (Language) (Maybe Locale) (Text)`
-
-    `accentuate "ga" Nothing "al chead"`
-
-* `feedback (Language) (Maybe Locale) (*Corrected* Text)`
-
-    `feedback "ht" (Just "en") "lè la wè"`
-
-The locales are included to provide localized error messages (or, in the case
-of `langs`, localized language names).
+See Haddock documentation (available on
+[Hackage](http://hackage.haskell.org/package/accentuateus)) for usage
+instructions.
