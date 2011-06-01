@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.AccentuateUs
-    ( Lang
+    ( -- $doc
+      Lang
     , Locale
     , AUSResponse(..)
     , LangsStatus(..)
@@ -27,25 +28,30 @@ import qualified Data.Text              as T
 type Lang   = C8.ByteString
 type Locale = C8.ByteString
 
--- | Get langs and their localized names
+-- | Get langs and their localized names. E.g.,
+--
+-- > getEnglishName langs = fromMaybe "Not Found" $ "en" `lookup` langs
+-- >
+-- > TIO.putStrLn =<< liftM (either decodeUtf8 (getEnglishName . languages))
+-- >                        (langs (Just "ga") 0)
+--
+--   The above example will get the localized name for English (ISO-639: en) for
+--   localized into Irish (ISO-639: ga).
 langs :: Maybe Locale -> Int -> IO (Either C8.ByteString AUSResponse)
 langs l v = catchIO (liftM eitherDecode call) (\_ -> err)
     where
         call = post [PCall "langs", PLocale (mbString l), PVersion v]
         err  = return . Left $ "Network error. Unable to retrieve languages."
 
--- | For a given language, and optionally a locale, accentuates text. E.g.,
+-- | For a given language, and optionally a locale, accentuates text. This
+--   function is that which does the heavy lifting, restoring diacritics
+--   (special characters) to otherwise plain text. E.g.,
 --
--- > {-# LANGUAGE OverloadedStrings #-}
--- >
--- > import Text.AccentuateUs   (accentuate, text)
--- > import Control.Monad       (liftM)
--- > import Data.Either         (either)
--- > import Data.Text.Encoding  (decodeUtf8)
--- > import qualified Data.Text.IO as TIO
--- >
 -- > TIO.putStrLn =<< liftM (either decodeUtf8 text)
 -- >    (accentuate "vie" (Just "en") "My tu bo ke hoach la chan ten lua")
+--
+--   The above example accentuates the input text ("My tu...") in Vietnamese
+--   with an English localization of error responses.
 accentuate  :: Lang -> Maybe Locale -> T.Text
             -> IO (Either C8.ByteString AUSResponse)
 accentuate la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
@@ -54,7 +60,16 @@ accentuate la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
         err  = return . Left $ C8.append
             "Network error. Unable to accentuate text for language " la
 
--- | Submits corrected text as feedback to Accentuate.us
+-- | Submits corrected text as feedback to Accentuate.us. It is helpful for all
+--   users if developers make good use of this function as it helps improve the
+--   Accentuate.us language models by retraining them.
+--
+-- > feedback "ht" (Just "en")
+-- >          "Bon, la fè sa apre demen pito, lè la wè mwen andèy."
+--
+--   This example submits the *correct* input text (all diacritics in their
+--   proper places) to the Accentuate.us servers to be queued for language model
+--   retraining.
 feedback :: Lang -> Maybe Locale -> T.Text
          -> IO (Either C8.ByteString AUSResponse)
 feedback la lo t = catchIO (liftM eitherDecode call) (\_ -> err)
@@ -182,3 +197,19 @@ url lang = URI "http:" uriAuth "/" "" ""
             base    = "api.accentuate.us"
             host    = (if lang' /= "" then lang' ++ "." else lang') ++ base
             lang'   = C8.unpack lang
+
+-- $doc
+--
+-- This package implements the Accentuate.us (<http://accentuate.us/>) API as it
+-- is described at <http://accentuate.us/api>.
+--
+-- The documentation's examples assume the following conditions:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- >
+-- > import Text.AccentuateUs
+-- > import Control.Monad       (liftM)
+-- > import Data.Either         (either)
+-- > import Data.Maybe          (fromMaybe)
+-- > import Data.Text.Encoding  (decodeUtf8)
+-- > import qualified Data.Text.IO as TIO
